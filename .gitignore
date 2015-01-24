@@ -1,7 +1,7 @@
 # Created by https://www.gitignore.io
 
 ### Current Project ###
-.bleve
+*.bleve
 
 ### OSX ###
 .DS_Store
