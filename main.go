@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"sync"
 
 	"github.com/blevesearch/bleve"
 	"github.com/gophergala/ging/docindex"
@@ -21,14 +22,15 @@ const (
 )
 
 var (
-	port          = flag.Int("port", 8080, "Port")
-	resourcesPath = flag.String("resources-path", "resources/", "Resources path")
-	indexPrefix   = flag.String("index-prefix", ".", "Indexes path")
-	docindexName  = flag.String("docindex", "docindex.bleve", "Docindex path")
-	localDevMode  = flag.Bool("local", false, "Enable local development mode")
-	fetchFilePath = flag.String("fetch-file", "", "Fetch and index package from the specified file")
-	templates     *template.Template
-	index         bleve.Index
+	port            = flag.Int("port", 8080, "Port")
+	resourcesPath   = flag.String("resources-path", "resources/", "Resources path")
+	indexPrefix     = flag.String("index-prefix", ".", "Indexes path")
+	docindexName    = flag.String("docindex", "docindex.bleve", "Docindex path")
+	localDevMode    = flag.Bool("local", false, "Enable local development mode")
+	fetchFilePath   = flag.String("fetch-file", "", "Fetch and index package from the specified file")
+	templates       *template.Template
+	index           bleve.Index
+	indexationMutex = new(sync.Mutex)
 )
 
 func main() {
@@ -37,12 +39,13 @@ func main() {
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
-	fetchPackages()
+	fetchPackagesFromFetchFile()
 
 	http.HandleFunc("/", indexHandler)
 	fs := http.FileServer(http.Dir(path.Join(*resourcesPath, "static/")))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	http.HandleFunc("/query", queryHandler)
+	http.HandleFunc("/package/add", addPackageHandle)
 
 	log.Printf("Listening on port %d\n", *port)
 	err = http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
@@ -51,7 +54,7 @@ func main() {
 	}
 }
 
-func fetchPackages() {
+func fetchPackagesFromFetchFile() {
 	if len(*fetchFilePath) <= 0 {
 		return
 	}
@@ -69,7 +72,12 @@ func fetchPackages() {
 		log.Printf("Error reading fetch-file: %s.\n", err.Error())
 		return
 	}
+	for _, rep := range repList {
+		fetchPackage(rep.Path)
+	}
+}
 
+func fetchPackage(pacakgePath string) {
 	var client *http.Client
 	if *localDevMode {
 		log.Println("Local development mode enabled")
@@ -82,15 +90,12 @@ func fetchPackages() {
 		}
 		client = oauth2.NewClient(oauth2.NoContext, tokenSource)
 	}
-
-	for _, rep := range repList {
-		err := docindex.IndexPackage(client, index, rep.Path)
-		if err != nil {
-			log.Printf("Error indexing package %s: %s.\n", rep, err.Error())
-			continue
-		}
-		log.Printf("Package %s indexed.\n", rep.Path)
+	err := docindex.IndexPackage(client, index, pacakgePath)
+	if err != nil {
+		log.Printf("Error indexing package %s: %s.\n", pacakgePath, err.Error())
+		return
 	}
+	log.Printf("Package %s indexed.\n", pacakgePath)
 }
 
 func init() {
@@ -102,6 +107,7 @@ func init() {
 		path.Join(*resourcesPath, "templates/scripts.html"),
 		path.Join(*resourcesPath, "templates/index.html"),
 		path.Join(*resourcesPath, "templates/query.html"),
+		path.Join(*resourcesPath, "templates/package-add.html"),
 	))
 }
 
@@ -137,6 +143,24 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 		"Results":    results,
 	}
 	err = templates.ExecuteTemplate(w, "query.html", values)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func addPackageHandle(w http.ResponseWriter, r *http.Request) {
+	packageName := r.FormValue("package")
+	vars := map[string]string{}
+	if len(packageName) > 0 {
+		go func() {
+			indexationMutex.Lock()
+			fetchPackage(packageName)
+			indexationMutex.Unlock()
+		}()
+		vars["PackageName"] = packageName
+	}
+	err := templates.ExecuteTemplate(w, "package-add.html", vars)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

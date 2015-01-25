@@ -15,6 +15,15 @@ body {
   color: white;
 }
 
+.navbar-default .navbar-nav>li>a {
+  color: white;
+}
+
+.navbar-default .navbar-nav>li>a:hover {
+  color: white;
+  text-decoration: underline;
+}
+
 .jumbotron {
   background-color: #0BC5D8;
   min-height: 160px;
@@ -151,4 +160,12 @@ span.highlight {
   margin-left: 115px;
   border: none;
   font-size: 90%;
+}
+
+/*
+   Add package
+ */
+
+.package-form  input {
+  width: 400px !important;
 }
