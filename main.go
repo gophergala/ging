@@ -29,6 +29,7 @@ var (
 	index         bleve.Index
 
 	repList = []string{
+		"net/http",
 		"github.com/gorilla/mux",
 		"github.com/gorilla/websocket",
 	}

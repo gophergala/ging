@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"log"
 	"path"
 
 	"github.com/blevesearch/bleve"
@@ -48,6 +49,8 @@ func Search(index bleve.Index, queryString string) ([]*SearchResult, *bleve.Sear
 		entry, err := newSearchResult(hit.Fields, hit.Fragments)
 		if err == nil {
 			entries = append(entries, entry)
+		} else {
+			log.Printf("Error building a search result entry: %s.\n", err.Error())
 		}
 	}
 	return entries, sr, nil
@@ -77,9 +80,7 @@ func newSearchResult(fields map[string]interface{}, fragments search.FieldFragme
 	switch doctype {
 	case PackageKind:
 		link = "http://" + path.Join("godoc.org/", importPath)
-	case FuncKind:
-	case ConstKind:
-	case VarKind:
+	case FuncKind, ConstKind, VarKind, TypeKind:
 		basepath := "http://" + path.Join("godoc.org/", importPath)
 		link = fmt.Sprintf("%s#%s", basepath, name)
 	}

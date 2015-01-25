@@ -106,6 +106,10 @@ body {
   background-color: #AADD1F;
 }
 
+.result .label-type {
+  background-color: #FF7600;
+}
+
 .link-wrapper a {
   padding-left: 115px;
   color: #2E353E;
@@ -136,7 +140,7 @@ span.highlight {
   white-space: nowrap;
   vertical-align: bottom;
   border-radius: .25em;
-  background-color: #E5D009;
+  background-color: #FFE600;
 }
 
 .content-highlight {

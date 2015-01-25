@@ -47,5 +47,13 @@ func IndexPackage(client *http.Client, index bleve.Index, pkgPath string) error 
 			return err
 		}
 	}
+	// Types
+	for _, typeDesc := range pkgDesc.Types {
+		typeName := fmt.Sprintf("%s.%s", pkgDesc.ImportPath, typeDesc.Name)
+		err := index.Index(typeName, typeDesc)
+		if err != nil {
+			return err
+		}
+	}
 	return index.Index(pkgDesc.ImportPath, pkgDesc)
 }

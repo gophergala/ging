@@ -22,10 +22,13 @@
                       <span class="label label-func">Function</span>
                     {{end}}
                     {{if eq .Type "c"}}
-                    <span class="label label-const">Constant</span>
+                      <span class="label label-const">Constant</span>
                     {{end}}
                     {{if eq .Type "v"}}
-                    <span class="label label-var">Variable</span>
+                      <span class="label label-var">Variable</span>
+                    {{end}}
+                    {{if eq .Type "t"}}
+                      <span class="label label-type">Type</span>
                     {{end}}
                     <span class="name">
                       {{if .Highlights.Name}}

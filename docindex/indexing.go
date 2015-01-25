@@ -35,6 +35,7 @@ type Package struct {
 	Funcs  []*Func  `json:"funcs"`
 	Consts []*Value `json:"const"`
 	Vars   []*Value `json:"vars"`
+	Types  []*Type  `json:"types"`
 }
 
 // NewPackage ...
@@ -65,6 +66,12 @@ func NewPackage(pkgDoc *doc.Package) *Package {
 		vars = append(vars, NewVars(pkg, v)...)
 	}
 	pkg.Vars = vars
+	// Type declarations
+	ts := make([]*Type, len(pkgDoc.Types))
+	for i, t := range pkgDoc.Types {
+		ts[i] = NewType(pkg, t)
+	}
+	pkg.Types = ts
 	return pkg
 }
 
@@ -126,6 +133,30 @@ func (v Value) Type() string {
 	return "value"
 }
 
+// Type represents top level type declaration.
+type Type struct {
+	Doc        string  `json:"doc"`
+	Name       string  `json:"name"`
+	ImportPath string  `json:"import"`
+	Kind       DocKind `json:"kind"`
+}
+
+// NewType ...
+// TODO(alvivi): doc this
+func NewType(pkg *Package, t *doc.Type) *Type {
+	return &Type{
+		Doc:        t.Doc,
+		Name:       t.Name,
+		ImportPath: pkg.ImportPath,
+		Kind:       TypeKind,
+	}
+}
+
+// Type is the most recurisve method out there.
+func (v Type) Type() string {
+	return "type"
+}
+
 // OpenOrCreateIndex ...
 // TODO(alvivi): doc this
 func OpenOrCreateIndex(indexPath string) (bleve.Index, error) {
@@ -171,6 +202,7 @@ func buildDefaultMapping() (*bleve.IndexMapping, error) {
 	packageMapping.AddSubDocumentMapping("funcs", entryMapping)
 	packageMapping.AddSubDocumentMapping("consts", entryMapping)
 	packageMapping.AddSubDocumentMapping("vars", entryMapping)
+	packageMapping.AddSubDocumentMapping("types", entryMapping)
 
 	// Index Mapping
 	indexMapping := bleve.NewIndexMapping()
@@ -188,6 +220,7 @@ func buildDefaultMapping() (*bleve.IndexMapping, error) {
 	indexMapping.AddDocumentMapping("func", entryMapping)
 	indexMapping.AddDocumentMapping("const", entryMapping)
 	indexMapping.AddDocumentMapping("vars", entryMapping)
+	indexMapping.AddDocumentMapping("types", entryMapping)
 	return indexMapping, nil
 }
 
