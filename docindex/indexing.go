@@ -15,6 +15,10 @@ const (
 	// PackageType ...
 	// TODO(alvivi): doc this
 	PackageType DocType = "p"
+
+	// FuncType ...
+	// TODO(alvivi): doc this
+	FuncType DocType = "f"
 )
 
 // Package ...
@@ -24,26 +28,59 @@ type Package struct {
 	Name       string  `json:"name"`
 	ImportPath string  `json:"import"`
 	DocType    DocType `json:"doctype"`
+
+	Funcs []*Func `json:"funcs"`
 }
 
 // NewPackage ...
 // TODO(alvivi): doc this
-func NewPackage(pkg *doc.Package) *Package {
+func NewPackage(pkgDoc *doc.Package) *Package {
+	pkg := new(Package)
+	pkg.DocType = PackageType
+	pkg.Name = pkgDoc.Name
+	pkg.ImportPath = pkgDoc.ImportPath
 	buf := new(bytes.Buffer)
-	doc.ToHTML(buf, pkg.Doc, nil)
-	pkgDoc := removeDocSourcecode(buf.String())
-	return &Package{
-		Doc:        pkgDoc,
-		Name:       pkg.Name,
-		ImportPath: pkg.ImportPath,
-		DocType:    PackageType,
+	doc.ToHTML(buf, pkgDoc.Doc, nil)
+	pkg.Doc = removeDocSourcecode(buf.String())
+	// Top level functions
+	funcs := make([]*Func, len(pkgDoc.Funcs))
+	for i, fn := range pkgDoc.Funcs {
+		funcs[i] = NewFunction(pkg, fn)
 	}
+	pkg.Funcs = funcs
+	return pkg
 }
 
 // Type ...
 // TODO(alvivi): doc this
 func (pkg Package) Type() string {
 	return "package"
+}
+
+// Func ...
+// TODO(alvivi): doc this
+type Func struct {
+	Doc        string  `json:"doc"`
+	Name       string  `json:"name"`
+	ImportPath string  `json:"import"`
+	DocType    DocType `json:"doctype"`
+}
+
+// NewFunction ...
+// TODO(alvivi): doc this
+func NewFunction(pkg *Package, fn *doc.Func) *Func {
+	return &Func{
+		Doc:        fn.Doc,
+		Name:       fn.Name,
+		ImportPath: pkg.ImportPath,
+		DocType:    FuncType,
+	}
+}
+
+// Type ...
+// TODO(alvivi): doc this
+func (pkg Func) Type() string {
+	return "func"
 }
 
 // OpenOrCreateIndex ...
@@ -74,6 +111,12 @@ func buildDefaultMapping() (*bleve.IndexMapping, error) {
 	noindexTextFieldMapping.Store = true
 	noindexTextFieldMapping.Index = false
 
+	// Function Mapping
+	funcMapping := bleve.NewDocumentStaticMapping()
+	funcMapping.AddFieldMappingsAt("name", keywordFieldMapping)
+	funcMapping.AddFieldMappingsAt("doc", docFieldMapping)
+	funcMapping.AddFieldMappingsAt("doctype", noindexTextFieldMapping)
+
 	// Package Mapping
 	packageMapping := bleve.NewDocumentStaticMapping()
 	packageMapping.AddFieldMappingsAt("name", keywordFieldMapping)
@@ -82,6 +125,7 @@ func buildDefaultMapping() (*bleve.IndexMapping, error) {
 	packageMapping.AddFieldMappingsAt("import", noindexTextFieldMapping)
 	packageMapping.AddFieldMappingsAt("doc", docFieldMapping)
 	packageMapping.AddFieldMappingsAt("doctype", noindexTextFieldMapping)
+	packageMapping.AddSubDocumentMapping("funcs", funcMapping)
 
 	// Index Mapping
 	indexMapping := bleve.NewIndexMapping()
@@ -96,5 +140,6 @@ func buildDefaultMapping() (*bleve.IndexMapping, error) {
 		return nil, err
 	}
 	indexMapping.AddDocumentMapping("package", packageMapping)
+	indexMapping.AddDocumentMapping("func", funcMapping)
 	return indexMapping, nil
 }

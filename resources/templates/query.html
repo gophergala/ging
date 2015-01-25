@@ -15,7 +15,12 @@
               <div class="col-md-12">
                 <div class="page-header">
                   <p>
-                    <span class="label label-package">Package</span>
+                    {{if eq .Type "p"}}
+                      <span class="label label-package">Package</span>
+                    {{end}}
+                    {{if eq .Type "f"}}
+                      <span class="label label-func">Function</span>
+                    {{end}}
                     <span class="name">
                       {{if .Highlights.Name}}
                         {{.Highlights.Name}}

@@ -1,6 +1,7 @@
 package docindex
 
 import (
+	"fmt"
 	"net/http"
 
 	"go/doc"
@@ -22,5 +23,9 @@ func IndexPackage(client *http.Client, index bleve.Index, pkgPath string) error 
 		return err
 	}
 	pkgDesc := NewPackage(doc.New(pkg, pkgPath, 0))
+	for _, fnDesc := range pkgDesc.Funcs {
+		fnName := fmt.Sprintf("%s.%s", pkgDesc.ImportPath, fnDesc.Name)
+		index.Index(fnName, fnDesc)
+	}
 	return index.Index(pkgDesc.ImportPath, pkgDesc)
 }

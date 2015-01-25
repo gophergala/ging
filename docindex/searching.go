@@ -2,6 +2,7 @@ package docindex
 
 import (
 	"errors"
+	"fmt"
 	"html/template"
 	"path"
 
@@ -35,6 +36,7 @@ func Search(index bleve.Index, queryString string) ([]*SearchResult, *bleve.Sear
 		"name",
 		"doctype",
 		"import",
+		"funcs",
 	}
 	search.Highlight = bleve.NewHighlightWithStyle("html")
 	search.Explain = false
@@ -65,16 +67,20 @@ func newSearchResult(fields map[string]interface{}, fragments search.FieldFragme
 		return nil, errors.New("Required field 'type' not found")
 	}
 	doctype := DocType(doctypeValue.(string))
+	// Import Path
+	importPathValue, ok := fields["import"]
+	if !ok {
+		return nil, errors.New("Required field 'import' not found")
+	}
+	importPath := importPathValue.(string)
 	// Link
 	var link string
 	switch doctype {
 	case PackageType:
-		importPathValue, ok := fields["import"]
-		if !ok {
-			return nil, errors.New("Required field for package, 'import' not found")
-		}
-		importPath := importPathValue.(string)
 		link = "http://" + path.Join("godoc.org/", importPath)
+	case FuncType:
+		basepath := "http://" + path.Join("godoc.org/", importPath)
+		link = fmt.Sprintf("%s#%s", basepath, name)
 	}
 	// Highlights - Name
 	var highlightName string

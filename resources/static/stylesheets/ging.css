@@ -94,6 +94,10 @@ body {
   background-color: #2E353E;
 }
 
+.result .label-func {
+  background-color: #FF1E69;
+}
+
 .link-wrapper a {
   padding-left: 115px;
   color: #2E353E;
