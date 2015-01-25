@@ -23,9 +23,29 @@ func IndexPackage(client *http.Client, index bleve.Index, pkgPath string) error 
 		return err
 	}
 	pkgDesc := NewPackage(doc.New(pkg, pkgPath, 0))
+	// Functions
 	for _, fnDesc := range pkgDesc.Funcs {
 		fnName := fmt.Sprintf("%s.%s", pkgDesc.ImportPath, fnDesc.Name)
-		index.Index(fnName, fnDesc)
+		err := index.Index(fnName, fnDesc)
+		if err != nil {
+			return err
+		}
+	}
+	// Constants
+	for _, constDesc := range pkgDesc.Consts {
+		constName := fmt.Sprintf("%s.%s", pkgDesc.ImportPath, constDesc.Name)
+		err := index.Index(constName, constDesc)
+		if err != nil {
+			return err
+		}
+	}
+	// Variables
+	for _, varDesc := range pkgDesc.Vars {
+		varName := fmt.Sprintf("%s.%s", pkgDesc.ImportPath, varDesc.Name)
+		err := index.Index(varName, varDesc)
+		if err != nil {
+			return err
+		}
 	}
 	return index.Index(pkgDesc.ImportPath, pkgDesc)
 }

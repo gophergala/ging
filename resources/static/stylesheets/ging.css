@@ -98,6 +98,14 @@ body {
   background-color: #FF1E69;
 }
 
+.result .label-const {
+  background-color: #009FFF;
+}
+
+.result .label-var {
+  background-color: #AADD1F;
+}
+
 .link-wrapper a {
   padding-left: 115px;
   color: #2E353E;

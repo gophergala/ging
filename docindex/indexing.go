@@ -12,13 +12,14 @@ import (
 type DocType string
 
 const (
-	// PackageType ...
-	// TODO(alvivi): doc this
+	// PackageType is the type of a package.
 	PackageType DocType = "p"
-
-	// FuncType ...
-	// TODO(alvivi): doc this
+	// FuncType is the type of a function.
 	FuncType DocType = "f"
+	// ConstType is the type of a const.
+	ConstType DocType = "c"
+	// VarType is the type of a variable.
+	VarType DocType = "v"
 )
 
 // Package ...
@@ -29,7 +30,9 @@ type Package struct {
 	ImportPath string  `json:"import"`
 	DocType    DocType `json:"doctype"`
 
-	Funcs []*Func `json:"funcs"`
+	Funcs  []*Func  `json:"funcs"`
+	Consts []*Value `json:"const"`
+	Vars   []*Value `json:"vars"`
 }
 
 // NewPackage ...
@@ -48,6 +51,18 @@ func NewPackage(pkgDoc *doc.Package) *Package {
 		funcs[i] = NewFunction(pkg, fn)
 	}
 	pkg.Funcs = funcs
+	// Top level constants
+	consts := []*Value{}
+	for _, c := range pkgDoc.Consts {
+		consts = append(consts, NewConsts(pkg, c)...)
+	}
+	pkg.Consts = consts
+	// Top level variables
+	vars := []*Value{}
+	for _, v := range pkgDoc.Vars {
+		vars = append(vars, NewVars(pkg, v)...)
+	}
+	pkg.Vars = vars
 	return pkg
 }
 
@@ -79,8 +94,34 @@ func NewFunction(pkg *Package, fn *doc.Func) *Func {
 
 // Type ...
 // TODO(alvivi): doc this
-func (pkg Func) Type() string {
+func (fn Func) Type() string {
 	return "func"
+}
+
+// Value represents top level constants and variables.
+type Value struct {
+	Doc        string  `json:"doc"`
+	Name       string  `json:"name"`
+	ImportPath string  `json:"import"`
+	DocType    DocType `json:"doctype"`
+}
+
+// NewConsts ...
+// TODO(alvivi): doc this
+func NewConsts(pkg *Package, v *doc.Value) []*Value {
+	return newValues(pkg, v, ConstType)
+}
+
+// NewVars ...
+// TODO(alvivi): doc this
+func NewVars(pkg *Package, v *doc.Value) []*Value {
+	return newValues(pkg, v, VarType)
+}
+
+// Type ...
+// TODO(alvivi): doc this
+func (v Value) Type() string {
+	return "value"
 }
 
 // OpenOrCreateIndex ...
@@ -111,11 +152,11 @@ func buildDefaultMapping() (*bleve.IndexMapping, error) {
 	noindexTextFieldMapping.Store = true
 	noindexTextFieldMapping.Index = false
 
-	// Function Mapping
-	funcMapping := bleve.NewDocumentStaticMapping()
-	funcMapping.AddFieldMappingsAt("name", keywordFieldMapping)
-	funcMapping.AddFieldMappingsAt("doc", docFieldMapping)
-	funcMapping.AddFieldMappingsAt("doctype", noindexTextFieldMapping)
+	// a generinc reusable entry mapping
+	entryMapping := bleve.NewDocumentStaticMapping()
+	entryMapping.AddFieldMappingsAt("name", keywordFieldMapping)
+	entryMapping.AddFieldMappingsAt("doc", docFieldMapping)
+	entryMapping.AddFieldMappingsAt("doctype", noindexTextFieldMapping)
 
 	// Package Mapping
 	packageMapping := bleve.NewDocumentStaticMapping()
@@ -125,7 +166,9 @@ func buildDefaultMapping() (*bleve.IndexMapping, error) {
 	packageMapping.AddFieldMappingsAt("import", noindexTextFieldMapping)
 	packageMapping.AddFieldMappingsAt("doc", docFieldMapping)
 	packageMapping.AddFieldMappingsAt("doctype", noindexTextFieldMapping)
-	packageMapping.AddSubDocumentMapping("funcs", funcMapping)
+	packageMapping.AddSubDocumentMapping("funcs", entryMapping)
+	packageMapping.AddSubDocumentMapping("consts", entryMapping)
+	packageMapping.AddSubDocumentMapping("vars", entryMapping)
 
 	// Index Mapping
 	indexMapping := bleve.NewIndexMapping()
@@ -140,6 +183,21 @@ func buildDefaultMapping() (*bleve.IndexMapping, error) {
 		return nil, err
 	}
 	indexMapping.AddDocumentMapping("package", packageMapping)
-	indexMapping.AddDocumentMapping("func", funcMapping)
+	indexMapping.AddDocumentMapping("func", entryMapping)
+	indexMapping.AddDocumentMapping("const", entryMapping)
+	indexMapping.AddDocumentMapping("vars", entryMapping)
 	return indexMapping, nil
+}
+
+func newValues(pkg *Package, value *doc.Value, t DocType) []*Value {
+	vs := make([]*Value, len(value.Names))
+	for i, n := range value.Names {
+		vs[i] = &Value{
+			Doc:        value.Doc,
+			Name:       n,
+			ImportPath: pkg.ImportPath,
+			DocType:    t,
+		}
+	}
+	return vs
 }

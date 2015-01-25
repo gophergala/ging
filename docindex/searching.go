@@ -36,7 +36,6 @@ func Search(index bleve.Index, queryString string) ([]*SearchResult, *bleve.Sear
 		"name",
 		"doctype",
 		"import",
-		"funcs",
 	}
 	search.Highlight = bleve.NewHighlightWithStyle("html")
 	search.Explain = false
@@ -79,6 +78,8 @@ func newSearchResult(fields map[string]interface{}, fragments search.FieldFragme
 	case PackageType:
 		link = "http://" + path.Join("godoc.org/", importPath)
 	case FuncType:
+	case ConstType:
+	case VarType:
 		basepath := "http://" + path.Join("godoc.org/", importPath)
 		link = fmt.Sprintf("%s#%s", basepath, name)
 	}
