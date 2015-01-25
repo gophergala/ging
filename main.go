@@ -102,22 +102,26 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/query?"+r.Form.Encode(), http.StatusTemporaryRedirect)
 		return
 	}
-	values := map[string]string{
-		"QueryValue": queryString,
-	}
-	err := templates.ExecuteTemplate(w, "index.html", values)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 
 	log.Printf("Search for '%s'\n", queryString)
 	query := bleve.NewMatchPhraseQuery(queryString)
 	search := bleve.NewSearchRequest(query)
-	searchResults, err := index.Search(search)
+	sr, err := index.Search(search)
 	if err != nil {
 		log.Fatalln(err.Error())
 		return
 	}
-	log.Println(searchResults)
+	log.Println(sr)
+
+	subtitle :=
+		fmt.Sprintf("<strong>%d</strong> results in <strong>%s</strong>", sr.Total, sr.Took)
+	values := map[string]interface{}{
+		"QueryValue": queryString,
+		"Subtitle":   template.HTML(subtitle),
+	}
+	err = templates.ExecuteTemplate(w, "index.html", values)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

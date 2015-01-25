@@ -3,6 +3,9 @@ body {
   margin-top: 50px;
 }
 
+/*
+  navbar
+ */
 .navbar {
   border: none;
   background-color: #2E353E;
@@ -17,6 +20,9 @@ body {
   min-height: 160px;
 }
 
+/*
+  jumbotron
+ */
 .jumbotron .form-inline {
   text-align: center;
   margin-top: 9px;
@@ -36,4 +42,15 @@ body {
 
 .jumbotron .form-inline button:disabled {
   opacity: 0.35;
+}
+
+.jumbotron .subtitle {
+  text-align: center;
+  height: 26px;
+  padding-top: 6px;
+}
+
+.jumbotron .subtitle p {
+  font-size: 12px;
+  color: white;
 }
