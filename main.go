@@ -78,9 +78,10 @@ func init() {
 	templates = template.Must(template.ParseFiles(
 		path.Join(*resourcesPath, "templates/head.html"),
 		path.Join(*resourcesPath, "templates/navbar.html"),
-		path.Join(*resourcesPath, "templates/query.html"),
+		path.Join(*resourcesPath, "templates/query-input.html"),
 		path.Join(*resourcesPath, "templates/scripts.html"),
 		path.Join(*resourcesPath, "templates/index.html"),
+		path.Join(*resourcesPath, "templates/query.html"),
 	))
 }
 
@@ -103,23 +104,19 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Search for '%s'\n", queryString)
-	query := bleve.NewMatchPhraseQuery(queryString)
-	search := bleve.NewSearchRequest(query)
-	sr, err := index.Search(search)
+	results, sr, err := docindex.Search(index, queryString)
 	if err != nil {
-		log.Fatalln(err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Println(sr)
-
 	subtitle :=
 		fmt.Sprintf("<strong>%d</strong> results in <strong>%s</strong>", sr.Total, sr.Took)
 	values := map[string]interface{}{
 		"QueryValue": queryString,
 		"Subtitle":   template.HTML(subtitle),
+		"Results":    results,
 	}
-	err = templates.ExecuteTemplate(w, "index.html", values)
+	err = templates.ExecuteTemplate(w, "query.html", values)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

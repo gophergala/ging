@@ -7,12 +7,23 @@ import (
 	"github.com/blevesearch/bleve"
 )
 
+// DocType ...
+// TODO(alvivi): doc this
+type DocType string
+
+const (
+	// PackageType ...
+	// TODO(alvivi): doc this
+	PackageType DocType = "p"
+)
+
 // Package ...
 // TODO(alvivi): doc this
 type Package struct {
-	Doc        string `json:"doc"`
-	Name       string `json:"name"`
-	ImportPath string `json:"-"`
+	Doc        string  `json:"doc"`
+	Name       string  `json:"name"`
+	ImportPath string  `json:"import"`
+	DocType    DocType `json:"doctype"`
 }
 
 // NewPackage ...
@@ -25,6 +36,7 @@ func NewPackage(pkg *doc.Package) *Package {
 		Doc:        pkgDoc,
 		Name:       pkg.Name,
 		ImportPath: pkg.ImportPath,
+		DocType:    PackageType,
 	}
 }
 
@@ -57,12 +69,19 @@ func buildDefaultMapping() (*bleve.IndexMapping, error) {
 	keywordFieldMapping := bleve.NewTextFieldMapping()
 	keywordFieldMapping.Analyzer = "keyword"
 
+	// a generic reusable mapping which only stores (but no index) a text
+	noindexTextFieldMapping := bleve.NewTextFieldMapping()
+	noindexTextFieldMapping.Store = true
+	noindexTextFieldMapping.Index = false
+
 	// Package Mapping
 	packageMapping := bleve.NewDocumentStaticMapping()
 	packageMapping.AddFieldMappingsAt("name", keywordFieldMapping)
 	// TODO(alvivi): ImportPath must be indexed, but requires a custom analayzer
 	// that removes the host.
+	packageMapping.AddFieldMappingsAt("import", noindexTextFieldMapping)
 	packageMapping.AddFieldMappingsAt("doc", docFieldMapping)
+	packageMapping.AddFieldMappingsAt("doctype", noindexTextFieldMapping)
 
 	// Index Mapping
 	indexMapping := bleve.NewIndexMapping()
