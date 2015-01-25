@@ -16,6 +16,8 @@ const (
 	PackageKind DocKind = "p"
 	// FuncKind is the kind of a function.
 	FuncKind DocKind = "f"
+	// MethodKind is the kind of a function.
+	MethodKind DocKind = "m"
 	// ConstKind is the kind of a const.
 	ConstKind DocKind = "c"
 	// VarKind is the kind of a variable.
@@ -69,7 +71,9 @@ func NewPackage(pkgDoc *doc.Package) *Package {
 	// Type declarations
 	ts := make([]*Type, len(pkgDoc.Types))
 	for i, t := range pkgDoc.Types {
-		ts[i] = NewType(pkg, t)
+		tt, fs := NewType(pkg, t)
+		ts[i] = tt
+		pkg.Funcs = append(pkg.Funcs, fs...)
 	}
 	pkg.Types = ts
 	return pkg
@@ -98,6 +102,17 @@ func NewFunction(pkg *Package, fn *doc.Func) *Func {
 		Name:       fn.Name,
 		ImportPath: pkg.ImportPath,
 		Kind:       FuncKind,
+	}
+}
+
+// NewMethod ...
+// TODO(alvivi): doc this
+func NewMethod(pkg *Package, fn *doc.Func) *Func {
+	return &Func{
+		Doc:        fn.Doc,
+		Name:       fn.Name,
+		ImportPath: pkg.ImportPath,
+		Kind:       MethodKind,
 	}
 }
 
@@ -139,17 +154,26 @@ type Type struct {
 	Name       string  `json:"name"`
 	ImportPath string  `json:"import"`
 	Kind       DocKind `json:"kind"`
+
+	Methods []Func `json:"methods"`
 }
 
 // NewType ...
 // TODO(alvivi): doc this
-func NewType(pkg *Package, t *doc.Type) *Type {
-	return &Type{
-		Doc:        t.Doc,
-		Name:       t.Name,
-		ImportPath: pkg.ImportPath,
-		Kind:       TypeKind,
+func NewType(pkg *Package, docType *doc.Type) (*Type, []*Func) {
+	t := new(Type)
+	t.Doc = docType.Doc
+	t.Name = docType.Name
+	t.ImportPath = pkg.ImportPath
+	t.Kind = TypeKind
+	fns := make([]*Func, len(docType.Funcs)+len(docType.Methods))
+	for i, f := range docType.Funcs {
+		fns[i] = NewFunction(pkg, f)
 	}
+	for i, m := range docType.Methods {
+		fns[i+len(docType.Funcs)] = NewMethod(pkg, m)
+	}
+	return t, fns
 }
 
 // Type is the most recurisve method out there.

@@ -30,6 +30,9 @@
                     {{if eq .Type "t"}}
                       <span class="label label-type">Type</span>
                     {{end}}
+                    {{if eq .Type "m"}}
+                      <span class="label label-method">Method</span>
+                    {{end}}
                     <span class="name">
                       {{if .Highlights.Name}}
                         {{.Highlights.Name}}

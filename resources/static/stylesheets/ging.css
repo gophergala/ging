@@ -60,7 +60,8 @@ body {
   Query results
  */
 .alert.no-results {
- text-align: center;
+  margin-top: 20px;
+  text-align: center;
 }
 
 .result {
@@ -108,6 +109,9 @@ body {
 
 .result .label-type {
   background-color: #FF7600;
+}
+.result .label-method {
+  background-color: #009FFF;
 }
 
 .link-wrapper a {
