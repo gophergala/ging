@@ -44,6 +44,7 @@ func main() {
 	fetchPackagesFromFetchFile()
 
 	http.HandleFunc("/", indexHandler)
+	http.HandleFunc("/humans.txt", humansHandler)
 	fs := http.FileServer(http.Dir(path.Join(*resourcesPath, "static/")))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	http.HandleFunc("/query", queryHandler)
@@ -115,6 +116,7 @@ func init() {
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	err := templates.ExecuteTemplate(w, "query.html", nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -123,6 +125,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func queryHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	queryString := r.FormValue("query")
 	if len(queryString) <= 0 {
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
@@ -154,6 +157,7 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func addPackageHandle(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	packageName := r.FormValue("package")
 	vars := map[string]string{}
 	if len(packageName) > 0 {
@@ -214,4 +218,9 @@ func queryStreamHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+}
+
+func humansHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	http.ServeFile(w, r, path.Join(*resourcesPath, "static/humans.txt"))
 }
