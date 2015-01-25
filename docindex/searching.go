@@ -14,7 +14,7 @@ import (
 // TODO(alvivi): doc this
 type SearchResult struct {
 	Name       string
-	Type       DocType
+	Type       DocKind
 	Link       string
 	Match      string
 	Highlights SearchHighlights
@@ -34,7 +34,7 @@ func Search(index bleve.Index, queryString string) ([]*SearchResult, *bleve.Sear
 	search := bleve.NewSearchRequest(query)
 	search.Fields = []string{
 		"name",
-		"doctype",
+		"kind",
 		"import",
 	}
 	search.Highlight = bleve.NewHighlightWithStyle("html")
@@ -61,11 +61,11 @@ func newSearchResult(fields map[string]interface{}, fragments search.FieldFragme
 	}
 	name := nameValue.(string)
 	// Type
-	doctypeValue, ok := fields["doctype"]
+	doctypeValue, ok := fields["kind"]
 	if !ok {
-		return nil, errors.New("Required field 'type' not found")
+		return nil, errors.New("Required field 'kind' not found")
 	}
-	doctype := DocType(doctypeValue.(string))
+	doctype := DocKind(doctypeValue.(string))
 	// Import Path
 	importPathValue, ok := fields["import"]
 	if !ok {
@@ -75,11 +75,11 @@ func newSearchResult(fields map[string]interface{}, fragments search.FieldFragme
 	// Link
 	var link string
 	switch doctype {
-	case PackageType:
+	case PackageKind:
 		link = "http://" + path.Join("godoc.org/", importPath)
-	case FuncType:
-	case ConstType:
-	case VarType:
+	case FuncKind:
+	case ConstKind:
+	case VarKind:
 		basepath := "http://" + path.Join("godoc.org/", importPath)
 		link = fmt.Sprintf("%s#%s", basepath, name)
 	}
@@ -96,7 +96,7 @@ func newSearchResult(fields map[string]interface{}, fragments search.FieldFragme
 
 	return &SearchResult{
 		Name: name,
-		Type: DocType(doctype),
+		Type: DocKind(doctype),
 		Link: link,
 		Highlights: SearchHighlights{
 			Name:    template.HTML(highlightName),

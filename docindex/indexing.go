@@ -7,19 +7,21 @@ import (
 	"github.com/blevesearch/bleve"
 )
 
-// DocType ...
+// DocKind ...
 // TODO(alvivi): doc this
-type DocType string
+type DocKind string
 
 const (
-	// PackageType is the type of a package.
-	PackageType DocType = "p"
-	// FuncType is the type of a function.
-	FuncType DocType = "f"
-	// ConstType is the type of a const.
-	ConstType DocType = "c"
-	// VarType is the type of a variable.
-	VarType DocType = "v"
+	// PackageKind is the kind of a package.
+	PackageKind DocKind = "p"
+	// FuncKind is the kind of a function.
+	FuncKind DocKind = "f"
+	// ConstKind is the kind of a const.
+	ConstKind DocKind = "c"
+	// VarKind is the kind of a variable.
+	VarKind DocKind = "v"
+	// TypeKind is the kind of a variable.
+	TypeKind DocKind = "t"
 )
 
 // Package ...
@@ -28,7 +30,7 @@ type Package struct {
 	Doc        string  `json:"doc"`
 	Name       string  `json:"name"`
 	ImportPath string  `json:"import"`
-	DocType    DocType `json:"doctype"`
+	Kind       DocKind `json:"kind"`
 
 	Funcs  []*Func  `json:"funcs"`
 	Consts []*Value `json:"const"`
@@ -39,7 +41,7 @@ type Package struct {
 // TODO(alvivi): doc this
 func NewPackage(pkgDoc *doc.Package) *Package {
 	pkg := new(Package)
-	pkg.DocType = PackageType
+	pkg.Kind = PackageKind
 	pkg.Name = pkgDoc.Name
 	pkg.ImportPath = pkgDoc.ImportPath
 	buf := new(bytes.Buffer)
@@ -78,7 +80,7 @@ type Func struct {
 	Doc        string  `json:"doc"`
 	Name       string  `json:"name"`
 	ImportPath string  `json:"import"`
-	DocType    DocType `json:"doctype"`
+	Kind       DocKind `json:"kind"`
 }
 
 // NewFunction ...
@@ -88,7 +90,7 @@ func NewFunction(pkg *Package, fn *doc.Func) *Func {
 		Doc:        fn.Doc,
 		Name:       fn.Name,
 		ImportPath: pkg.ImportPath,
-		DocType:    FuncType,
+		Kind:       FuncKind,
 	}
 }
 
@@ -103,19 +105,19 @@ type Value struct {
 	Doc        string  `json:"doc"`
 	Name       string  `json:"name"`
 	ImportPath string  `json:"import"`
-	DocType    DocType `json:"doctype"`
+	Kind       DocKind `json:"kind"`
 }
 
 // NewConsts ...
 // TODO(alvivi): doc this
 func NewConsts(pkg *Package, v *doc.Value) []*Value {
-	return newValues(pkg, v, ConstType)
+	return newValues(pkg, v, ConstKind)
 }
 
 // NewVars ...
 // TODO(alvivi): doc this
 func NewVars(pkg *Package, v *doc.Value) []*Value {
-	return newValues(pkg, v, VarType)
+	return newValues(pkg, v, VarKind)
 }
 
 // Type ...
@@ -156,7 +158,7 @@ func buildDefaultMapping() (*bleve.IndexMapping, error) {
 	entryMapping := bleve.NewDocumentStaticMapping()
 	entryMapping.AddFieldMappingsAt("name", keywordFieldMapping)
 	entryMapping.AddFieldMappingsAt("doc", docFieldMapping)
-	entryMapping.AddFieldMappingsAt("doctype", noindexTextFieldMapping)
+	entryMapping.AddFieldMappingsAt("kind", noindexTextFieldMapping)
 
 	// Package Mapping
 	packageMapping := bleve.NewDocumentStaticMapping()
@@ -165,7 +167,7 @@ func buildDefaultMapping() (*bleve.IndexMapping, error) {
 	// that removes the host.
 	packageMapping.AddFieldMappingsAt("import", noindexTextFieldMapping)
 	packageMapping.AddFieldMappingsAt("doc", docFieldMapping)
-	packageMapping.AddFieldMappingsAt("doctype", noindexTextFieldMapping)
+	packageMapping.AddFieldMappingsAt("kind", noindexTextFieldMapping)
 	packageMapping.AddSubDocumentMapping("funcs", entryMapping)
 	packageMapping.AddSubDocumentMapping("consts", entryMapping)
 	packageMapping.AddSubDocumentMapping("vars", entryMapping)
@@ -189,14 +191,14 @@ func buildDefaultMapping() (*bleve.IndexMapping, error) {
 	return indexMapping, nil
 }
 
-func newValues(pkg *Package, value *doc.Value, t DocType) []*Value {
+func newValues(pkg *Package, value *doc.Value, t DocKind) []*Value {
 	vs := make([]*Value, len(value.Names))
 	for i, n := range value.Names {
 		vs[i] = &Value{
 			Doc:        value.Doc,
 			Name:       n,
 			ImportPath: pkg.ImportPath,
-			DocType:    t,
+			Kind:       t,
 		}
 	}
 	return vs
