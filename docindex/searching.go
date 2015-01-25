@@ -99,7 +99,7 @@ func newSearchResult(fields map[string]interface{}, fragments search.FieldFragme
 	switch doctype {
 	case PackageKind:
 		link = "http://" + path.Join("godoc.org/", importPath)
-	case FuncKind, ConstKind, VarKind, TypeKind:
+	case FuncKind, MethodKind, ConstKind, VarKind, TypeKind:
 		basepath := "http://" + path.Join("godoc.org/", importPath)
 		link = fmt.Sprintf("%s#%s", basepath, name)
 	}

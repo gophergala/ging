@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"html/template"
@@ -25,17 +26,50 @@ var (
 	indexPrefix   = flag.String("index-prefix", ".", "Indexes path")
 	docindexName  = flag.String("docindex", "docindex.bleve", "Docindex path")
 	localDevMode  = flag.Bool("local", false, "Enable local development mode")
+	fetchFilePath = flag.String("fetch-file", "", "Fetch and index package from the specified file")
 	templates     *template.Template
 	index         bleve.Index
-
-	repList = []string{
-		"net/http",
-		"github.com/gorilla/mux",
-		"github.com/gorilla/websocket",
-	}
 )
 
 func main() {
+	var err error
+	index, err = docindex.OpenOrCreateIndex(path.Join(*indexPrefix, *docindexName))
+	if err != nil {
+		log.Fatalln(err.Error())
+	}
+	fetchPackages()
+
+	http.HandleFunc("/", indexHandler)
+	fs := http.FileServer(http.Dir(path.Join(*resourcesPath, "static/")))
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	http.HandleFunc("/query", queryHandler)
+
+	log.Printf("Listening on port %d\n", *port)
+	err = http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
+	if err != nil {
+		log.Fatalln(err.Error())
+	}
+}
+
+func fetchPackages() {
+	if len(*fetchFilePath) <= 0 {
+		return
+	}
+	f, err := os.Open(*fetchFilePath)
+	if err != nil {
+		log.Printf("Error opening fetch-file: %s.\n", err.Error())
+		return
+	}
+	defer f.Close()
+	repList := []struct {
+		Path string `json:"path"`
+	}{}
+	err = json.NewDecoder(f).Decode(&repList)
+	if err != nil {
+		log.Printf("Error reading fetch-file: %s.\n", err.Error())
+		return
+	}
+
 	var client *http.Client
 	if *localDevMode {
 		log.Println("Local development mode enabled")
@@ -48,29 +82,14 @@ func main() {
 		}
 		client = oauth2.NewClient(oauth2.NoContext, tokenSource)
 	}
-	var err error
-	index, err = docindex.OpenOrCreateIndex(path.Join(*indexPrefix, *docindexName))
-	if err != nil {
-		log.Fatalln(err.Error())
-	}
+
 	for _, rep := range repList {
-		err := docindex.IndexPackage(client, index, rep)
+		err := docindex.IndexPackage(client, index, rep.Path)
 		if err != nil {
 			log.Printf("Error indexing package %s: %s.\n", rep, err.Error())
 			continue
 		}
-		log.Printf("Package %s indexed.\n", rep)
-	}
-
-	http.HandleFunc("/", indexHandler)
-	fs := http.FileServer(http.Dir(path.Join(*resourcesPath, "static/")))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
-	http.HandleFunc("/query", queryHandler)
-
-	log.Printf("Listening on port %d\n", *port)
-	err = http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
-	if err != nil {
-		log.Fatalln(err.Error())
+		log.Printf("Package %s indexed.\n", rep.Path)
 	}
 }
 
