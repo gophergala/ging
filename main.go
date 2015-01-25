@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"github.com/blevesearch/bleve"
 	"github.com/gophergala/ging/docindex"
 	"github.com/gophergala/ging/utils/envtokensource"
+	"github.com/gorilla/websocket"
 	"golang.org/x/oauth2"
 )
 
@@ -45,6 +47,7 @@ func main() {
 	fs := http.FileServer(http.Dir(path.Join(*resourcesPath, "static/")))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	http.HandleFunc("/query", queryHandler)
+	http.HandleFunc("/stream/query", queryStreamHandler)
 	http.HandleFunc("/package/add", addPackageHandle)
 
 	log.Printf("Listening on port %d\n", *port)
@@ -105,14 +108,14 @@ func init() {
 		path.Join(*resourcesPath, "templates/navbar.html"),
 		path.Join(*resourcesPath, "templates/query-input.html"),
 		path.Join(*resourcesPath, "templates/scripts.html"),
-		path.Join(*resourcesPath, "templates/index.html"),
 		path.Join(*resourcesPath, "templates/query.html"),
+		path.Join(*resourcesPath, "templates/query-results.html"),
 		path.Join(*resourcesPath, "templates/package-add.html"),
 	))
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-	err := templates.ExecuteTemplate(w, "index.html", nil)
+	err := templates.ExecuteTemplate(w, "query.html", nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -138,9 +141,10 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 	subtitle :=
 		fmt.Sprintf("<strong>%d</strong> results in <strong>%s</strong>", sr.Total, sr.Took)
 	values := map[string]interface{}{
-		"QueryValue": queryString,
-		"Subtitle":   template.HTML(subtitle),
-		"Results":    results,
+		"ShowNoResultAlert": len(queryString) > 0,
+		"QueryValue":        queryString,
+		"Subtitle":          template.HTML(subtitle),
+		"Results":           results,
 	}
 	err = templates.ExecuteTemplate(w, "query.html", values)
 	if err != nil {
@@ -164,5 +168,50 @@ func addPackageHandle(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+}
+
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
+
+func queryStreamHandler(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	for {
+		messageType, p, err := conn.ReadMessage()
+		if err != nil {
+			return
+		}
+		queryString := string(p)
+		results, _, err := docindex.Search(index, queryString)
+		if err != nil {
+			return
+		}
+		nw, err := conn.NextWriter(messageType)
+		if err != nil {
+			return
+		}
+		values := map[string]interface{}{
+			"QueryValue": queryString,
+			"Results":    results,
+		}
+		buf := new(bytes.Buffer)
+		err = templates.ExecuteTemplate(buf, "query-results.html", values)
+		json.NewEncoder(nw).Encode(struct {
+			Query  string `json:"query"`
+			Result string `json:"result"`
+		}{
+			Query:  queryString,
+			Result: buf.String(),
+		})
+		nw.Close()
+		if err != nil {
+			return
+		}
 	}
 }
