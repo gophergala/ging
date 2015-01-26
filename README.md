@@ -21,7 +21,7 @@ Right now *Ging* is accessible at http://ging.ngrok.com, but It's temporal.
 
 ## Implementation Details
 
-*Ging* uses [bleve](blevesearch.com) for indexation and
+*Ging* uses [bleve](http://blevesearch.com) for indexation and
 [Leveldb](http://leveldb.org/) for storage. The http layer is written with help
 of [gorilla/websocket](https://github.com/gorilla/websocket) to implement
 auto-completion.
