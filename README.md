@@ -12,6 +12,13 @@ packages are indexed, but everybody can add a package to the index.
 
 Right now *Ging* is accessible at http://ging.ngrok.com, but It's temporal.
 
+## Examples
+
+* `Buffer` [Search](http://ging.ngrok.com/query?query=Buffer).
+* `DefaultClient` [Search](http://ging.ngrok.com/query?query=DefaultClient).
+* `websocket` [Search](http://ging.ngrok.com/query?query=websocket).
+* `Template HTML` [Search](http://ging.ngrok.com/query?query=Template+HTML).
+
 ## Implementation Details
 
 *Ging* uses [bleve](blevesearch.com) for indexation and
